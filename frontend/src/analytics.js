@@ -1,20 +1,15 @@
 /**
  * Google Analytics 4 + custom event tracking for TCO Calculator.
- * Set VITE_GA_ID in env (e.g. G-XXXXXXXXXX) to enable.
+ * GA script loads from index.html (G-FV2JJFMKN3). This module ensures gtag exists for custom events.
  */
 
-const GA_ID = import.meta.env.VITE_GA_ID
+const GA_ID = import.meta.env.VITE_GA_ID || 'G-FV2JJFMKN3'
 
 export function initGA() {
-  if (!GA_ID) return
-  const script = document.createElement('script')
-  script.async = true
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`
-  document.head.appendChild(script)
-
   window.dataLayer = window.dataLayer || []
-  window.gtag = function () { window.dataLayer.push(arguments) }
-  window.gtag('js', new Date())
+  if (!window.gtag) {
+    window.gtag = function () { window.dataLayer.push(arguments) }
+  }
   window.gtag('config', GA_ID, { send_page_view: true })
 }
 
