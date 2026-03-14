@@ -59,6 +59,12 @@ export async function getModels(brand) {
   return r.json()
 }
 
+export async function getModelInfo(brand, model) {
+  const r = await fetch(`${BASE}/api/v1/tco/brands/${encodeURIComponent(brand)}/models/${encodeURIComponent(model)}/info`)
+  if (!r.ok) return null
+  return r.json()
+}
+
 export async function calculateTco(payload) {
   const r = await fetch(`${BASE}/api/v1/tco/calculate`, {
     method: 'POST',

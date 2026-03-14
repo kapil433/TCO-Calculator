@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import Card from './Card'
-import { getFuelPrices, getTax, getCessBreakdown, getInsurancePreview, getMaintenanceSchedule } from '../api/client'
+import { getFuelPrices, getTax, getCessBreakdown, getInsurancePreview, getMaintenanceSchedule, getModelInfo } from '../api/client'
 
 const FUEL_OPTIONS = [
   { value: 'petrol', label: 'Petrol' },
@@ -58,6 +58,14 @@ export function StepVehicle({ v, setState, brands, modelsByBrand, onLoadModels }
   useEffect(() => {
     if (v.make && !modelsByBrand[v.make]) onLoadModels(v.make)
   }, [v.make])
+
+  useEffect(() => {
+    if (v.make && v.model) {
+      getModelInfo(v.make, v.model).then((info) => {
+        if (info?.eng) setState({ eng: info.eng })
+      }).catch(() => {})
+    }
+  }, [v.make, v.model])
 
   return (
     <Card title="Make, model & fuel">
