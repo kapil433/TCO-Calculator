@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { trackWizardStep } from '../analytics'
 
 const STEP_LABELS = [
   'State & Period',
@@ -57,7 +58,7 @@ export default function WizardLayout({ children, onCalculate, loading }) {
             type="button"
             className="btn-primary"
             style={{ width: 'auto', padding: '12px 32px', minHeight: 44 }}
-            onClick={() => setStep(step + 1)}
+            onClick={() => { const next = step + 1; setStep(next); trackWizardStep(next, STEP_LABELS[next]) }}
           >
             Next
           </button>

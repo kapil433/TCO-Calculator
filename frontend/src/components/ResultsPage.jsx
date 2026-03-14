@@ -2,6 +2,7 @@ import { useState, useRef, useMemo, Fragment } from 'react'
 import { jsPDF } from 'jspdf'
 import * as XLSX from 'xlsx'
 import html2canvas from 'html2canvas'
+import { trackTabView, trackExport } from '../analytics'
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, BarElement, PointElement, LineElement,
@@ -676,6 +677,7 @@ function DownloadTabImage({ contentRef, tabName, numYears }) {
 
   const handleDownload = async () => {
     if (!contentRef?.current || saving) return
+    trackExport(`image_${tabName}`)
     setSaving(true)
     try {
       const canvas = await html2canvas(contentRef.current, {
@@ -875,10 +877,10 @@ function generateExcel(results, numYears) {
 function ExportBar({ results, numYears, setActiveTab, contentRef, setExporting, exporting }) {
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      <button type="button" className="btn-secondary" disabled={exporting} onClick={() => generatePDFFromUI(setActiveTab, contentRef, numYears, results, setExporting)}>
+      <button type="button" className="btn-secondary" disabled={exporting} onClick={() => { trackExport('pdf'); generatePDFFromUI(setActiveTab, contentRef, numYears, results, setExporting) }}>
         {exporting ? 'Generating...' : 'PDF Report'}
       </button>
-      <button type="button" className="btn-secondary" onClick={() => generateExcel(results, numYears)}>Excel</button>
+      <button type="button" className="btn-secondary" onClick={() => { trackExport('excel'); generateExcel(results, numYears) }}>Excel</button>
     </div>
   )
 }
@@ -906,7 +908,7 @@ export default function ResultsPage({ results, numYears, onBack }) {
         <button type="button" className="btn-secondary" onClick={onBack} style={{ padding: '8px 16px' }}>← Back</button>
         <div className="results-tabs">
           {TABS.map((tab, i) => (
-            <button key={tab} type="button" className={`results-tab${i === activeTab ? ' active' : ''}`} onClick={() => setActiveTab(i)}>{tab}</button>
+            <button key={tab} type="button" className={`results-tab${i === activeTab ? ' active' : ''}`} onClick={() => { setActiveTab(i); trackTabView(tab) }}>{tab}</button>
           ))}
         </div>
         <ExportBar results={results} numYears={numYears} setActiveTab={setActiveTab} contentRef={contentRef} setExporting={setExporting} exporting={exporting} />

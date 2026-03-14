@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import WizardLayout from './components/WizardLayout'
 import ResultsPage from './components/ResultsPage'
+import { trackCalculate, trackCompareMode } from './analytics'
 import {
   StepStateYears,
   StepVehicle,
@@ -150,6 +151,7 @@ export default function App() {
         vehicles: payloads,
         num_years_global: numYears,
       })
+      trackCalculate(payloads, numYears)
       setResults(res)
       setView('results')
     } catch (e) {
@@ -209,7 +211,7 @@ export default function App() {
                 type="button"
                 className={vehicleCount === n ? 'btn-primary' : 'btn-secondary'}
                 style={{ width: 'auto', padding: '8px 14px', fontSize: 12 }}
-                onClick={() => setVehicleCount(n)}
+                onClick={() => { setVehicleCount(n); if (n > 1) trackCompareMode(n) }}
               >
                 {n === 1 ? '1 Vehicle' : 'Compare 3'}
               </button>
