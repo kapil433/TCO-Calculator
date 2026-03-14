@@ -989,8 +989,8 @@ export default function ResultsPage({ results, numYears, onBack }) {
             <a href="https://kapil433.github.io/TCO-Calculator/" target="_blank" rel="noopener noreferrer">Live App</a>
           </div>
           <p className="footer-legal">
-            &copy; {new Date().getFullYear()} Kapil Lodha. Open-source under MIT License.<br />
-            Data sources: IRDAI, state RTO portals, industry depreciation benchmarks. Figures are estimates for educational use only — not financial advice.
+            &copy; {new Date().getFullYear()} Kapil Gupta.<br />
+            Data sources: IRDAI, state RTO portals, industry depreciation benchmarks.
           </p>
         </div>
       </footer>
