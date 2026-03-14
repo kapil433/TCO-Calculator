@@ -142,11 +142,6 @@ export default function App() {
     getFuelPricesLiveMeta().then(setFuelLiveMeta).catch(() => {})
   }, [])
 
-  const loadModels = useCallback((brand) => {
-    if (modelsByBrand[brand]) return
-    getModels(brand).then((list) => setModelsByBrand((prev) => ({ ...prev, [brand]: list }))).catch(() => {})
-  }, [modelsByBrand])
-
   const setVehicle = (index, upd) => {
     setVehicles((prev) => {
       const next = [...prev]
@@ -154,6 +149,13 @@ export default function App() {
       return next
     })
   }
+
+  const makeSetState = useCallback((idx) => (upd) => setVehicle(idx, upd), [])
+
+  const loadModels = useCallback((brand) => {
+    if (modelsByBrand[brand]) return
+    getModels(brand).then((list) => setModelsByBrand((prev) => ({ ...prev, [brand]: list }))).catch(() => {})
+  }, [modelsByBrand])
 
   const handleCalculate = async () => {
     setError(null)
@@ -210,8 +212,6 @@ export default function App() {
 
   const activeVehicles = vehicles.slice(0, vehicleCount)
   const VCOLORS = ['#d4a017', '#1971c2', '#2f9e44']
-
-  const makeSetState = useCallback((idx) => (upd) => setVehicle(idx, upd), [])
 
   const renderStepForVehicles = (StepComponent, extraProps = {}) => {
     if (vehicleCount === 1) {

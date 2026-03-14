@@ -1,8 +1,10 @@
 /**
  * API client for TCO Calculator backend.
- * Base URL: from env VITE_API_URL or relative /api (proxied in dev).
+ * Base URL: from env VITE_API_URL, or Render backend (prod), or relative /api (dev proxy).
  */
-const BASE = import.meta.env.VITE_API_URL || ''
+const BASE =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? 'https://tco-calculator-api.onrender.com' : '')
 
 let _backendStatus = 'unknown'
 export function getBackendStatus() { return _backendStatus }
