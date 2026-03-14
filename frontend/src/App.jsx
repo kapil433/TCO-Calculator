@@ -215,14 +215,14 @@ export default function App() {
 
   const renderStepForVehicles = (StepComponent, extraProps = {}) => {
     if (vehicleCount === 1) {
-      return <StepComponent v={vehicles[0]} setState={makeSetState(0)} {...extraProps} />
+      return <StepComponent v={vehicles[0]} setState={makeSetState(0)} vehicleIndex={0} {...extraProps} />
     }
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {activeVehicles.map((_, i) => (
           <div key={i} style={{ borderLeft: `3px solid ${VCOLORS[i]}`, paddingLeft: 12 }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: VCOLORS[i], marginBottom: 6 }}>Vehicle {i + 1}</p>
-            <StepComponent v={vehicles[i]} setState={makeSetState(i)} {...extraProps} />
+            <StepComponent v={vehicles[i]} setState={makeSetState(i)} vehicleIndex={i} {...extraProps} />
           </div>
         ))}
       </div>

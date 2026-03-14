@@ -56,7 +56,7 @@ export function StepStateYears({ stateCode, setStateCode, numYears, setNumYears,
 }
 
 /* ─── Step 2: Make / model / fuel / price ─── */
-export function StepVehicle({ v, setState, brands, modelsByBrand, onLoadModels }) {
+export function StepVehicle({ v, setState, brands, modelsByBrand, onLoadModels, vehicleIndex = 0 }) {
   useEffect(() => {
     if (v.make && !modelsByBrand[v.make]) onLoadModels(v.make)
   }, [v.make])
@@ -115,10 +115,10 @@ export function StepVehicle({ v, setState, brands, modelsByBrand, onLoadModels }
             onChange={(e) => setState({ ex: numSet(e.target.value) })}
             min={100000} step={50000} placeholder="e.g. 1000000"
             aria-invalid={v.ex !== '' && v.ex <= 0 ? 'true' : undefined}
-            aria-describedby="ex-hint"
+            aria-describedby={`ex-hint-${vehicleIndex}`}
             style={v.ex !== '' && v.ex <= 0 ? { borderColor: 'var(--red)' } : {}}
           />
-          {v.ex !== '' && v.ex <= 0 && <span id="ex-hint" className="hint" style={{ color: 'var(--red)' }}>Required: enter a price greater than 0</span>}
+          {v.ex !== '' && v.ex <= 0 && <span id={`ex-hint-${vehicleIndex}`} className="hint" style={{ color: 'var(--red)' }}>Required: enter a price greater than 0</span>}
         </div>
         <div>
           <label>Accessories / extras (₹)</label>
