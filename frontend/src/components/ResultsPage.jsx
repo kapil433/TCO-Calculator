@@ -753,7 +753,9 @@ async function generatePDFFromUI(setActiveTab, contentRef, numYears, results, se
   const footerH = 8
   const usableW = pw - 2 * margin
   const usableContentH = ph - headerH - footerH
-  const RENDER_WIDTH = 1200
+  const RENDER_WIDTH = 900
+  const SCALE = 1.25
+  const JPEG_QUALITY = 0.82
   let isFirst = true
 
   const addHeaderFooter = (tabIndex, isTabStart) => {
@@ -774,7 +776,7 @@ async function generatePDFFromUI(setActiveTab, contentRef, numYears, results, se
     const el = contentRef.current
     if (!el) return
     const canvas = await html2canvas_(el, {
-      scale: 2, useCORS: true, backgroundColor: '#f8f9fa',
+      scale: SCALE, useCORS: true, backgroundColor: '#f8f9fa',
       windowWidth: RENDER_WIDTH, logging: false,
       onclone: (doc) => {
         const cloned = doc.querySelector('[data-pdf-content]') || doc.body
@@ -815,7 +817,7 @@ async function generatePDFFromUI(setActiveTab, contentRef, numYears, results, se
       ctx.drawImage(canvas, 0, Math.round(srcY), canvas.width, Math.round(sliceSrcH), 0, 0, canvas.width, Math.round(sliceSrcH))
 
       const sliceMmH = sliceSrcH / pxPerMm
-      doc.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, topOffset, imgW, sliceMmH)
+      doc.addImage(sliceCanvas.toDataURL('image/jpeg', JPEG_QUALITY), 'JPEG', margin, topOffset, imgW, sliceMmH)
       addHeaderFooter(tabIndex, isTabStart)
 
       srcY = endSrcY
