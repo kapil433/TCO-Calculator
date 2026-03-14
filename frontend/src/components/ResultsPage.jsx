@@ -987,8 +987,6 @@ export default function ResultsPage({ results, numYears, onBack }) {
             State-wise life tax, IRDAI insurance, model-specific depreciation &amp; resale.
           </p>
           <div className="footer-links">
-            <a href="https://github.com/kapil433/TCO-Calculator" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <span className="footer-sep">·</span>
             <a href="https://kapil433.github.io/TCO-Calculator/" target="_blank" rel="noopener noreferrer">Live App</a>
           </div>
           <p className="footer-legal">

@@ -261,11 +261,9 @@ export default function App() {
             Compare total cost of ownership for Petrol, Diesel, CNG, EV &amp; Hybrid vehicles.
             State-wise life tax, IRDAI insurance, model-specific depreciation &amp; resale.
           </p>
-          <div className="footer-links">
-            <a href="https://github.com/kapil433/TCO-Calculator" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <span className="footer-sep">·</span>
-            <a href="https://kapil433.github.io/TCO-Calculator/" target="_blank" rel="noopener noreferrer">Live App</a>
-          </div>
+            <div className="footer-links">
+              <a href="https://kapil433.github.io/TCO-Calculator/" target="_blank" rel="noopener noreferrer">Live App</a>
+            </div>
           <p className="footer-legal">
             &copy; {new Date().getFullYear()} Kapil Gupta.<br />
             Data sources: IRDAI, state RTO portals, industry depreciation benchmarks.
