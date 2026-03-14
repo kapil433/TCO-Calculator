@@ -205,7 +205,7 @@ export default function App() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            {[1, 3].map((n) => (
+            {[1, 2, 3].map((n) => (
               <button
                 key={n}
                 type="button"
@@ -213,7 +213,7 @@ export default function App() {
                 style={{ width: 'auto', padding: '8px 14px', fontSize: 12 }}
                 onClick={() => { setVehicleCount(n); if (n > 1) trackCompareMode(n) }}
               >
-                {n === 1 ? '1 Vehicle' : 'Compare 3'}
+                {n === 1 ? '1 Vehicle' : `Compare ${n}`}
               </button>
             ))}
           </div>
