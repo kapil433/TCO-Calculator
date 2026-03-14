@@ -17,6 +17,7 @@ import {
   getModels,
   getFuelPricesLiveMeta,
   calculateTco,
+  getBackendStatus,
 } from './api/client'
 
 const defaultVehicle = () => ({
@@ -50,14 +51,31 @@ const defaultVehicle = () => ({
   svc_yr1: null,
 })
 
+const IDV_D = [0.05, 0.15, 0.20, 0.30, 0.40, 0.50, 0.55, 0.60, 0.65, 0.68, 0.70, 0.72, 0.74, 0.76, 0.78]
+function getODRate(idv) {
+  if (idv <= 500000) return 0.025
+  if (idv <= 750000) return 0.02
+  if (idv <= 1000000) return 0.015
+  if (idv <= 1500000) return 0.0125
+  return 0.0075
+}
+
 function buildAddonTotal(v, numYears) {
   const addons = v.addons || {}
+  const ex = Number(v.ex) || 0
+  const isEV = v.fuel === 'ev'
   let total = 0
-  if (addons.zeroDep) total += (v.ex || 0) * 0.025 * 0.8 * 0.2 * Math.min(numYears, 5) * 1.18
-  if (addons.engineProtect) total += 1200 * numYears * 1.18
-  if (addons.rsa) total += 599 * numYears * 1.18
-  if (addons.returnToInvoice) total += (v.ex || 0) * 0.025 * 0.8 * 0.1 * Math.min(numYears, 3) * 1.18
-  return Math.round(total)
+  for (let yr = 1; yr <= numYears; yr++) {
+    const idv = ex * (1 - IDV_D[Math.min(yr - 1, IDV_D.length - 1)])
+    const odBase = idv * getODRate(idv)
+    if (addons.zeroDep && yr <= 5) total += Math.round(odBase * 0.20 * 1.18)
+    if (addons.engineProtect && !isEV) total += Math.round(1200 * 1.18)
+    if (addons.rsa) total += Math.round(599 * 1.18)
+    if (addons.keyProtect) total += Math.round(399 * 1.18)
+    if (addons.consumables) total += Math.round(500 * 1.18)
+    if (addons.returnToInvoice && yr <= 3) total += Math.round(odBase * 0.10 * 1.18)
+  }
+  return total
 }
 
 function buildVehiclePayload(v, stateCode, numYears) {
@@ -112,10 +130,15 @@ export default function App() {
   const [brands, setBrands] = useState([])
   const [modelsByBrand, setModelsByBrand] = useState({})
   const [fuelLiveMeta, setFuelLiveMeta] = useState({})
+  const [backendDown, setBackendDown] = useState(false)
 
   useEffect(() => {
-    getStates().then(setStates).catch(() => setStates([{ code: 'MH', name: 'Maharashtra' }]))
-    getBrands().then(setBrands).catch(() => setBrands([]))
+    getStates()
+      .then((s) => { setStates(s); setBackendDown(false) })
+      .catch(() => { setStates([{ code: 'MH', name: 'Maharashtra' }]); setBackendDown(getBackendStatus() === 'down') })
+    getBrands()
+      .then(setBrands)
+      .catch(() => setBrands([]))
     getFuelPricesLiveMeta().then(setFuelLiveMeta).catch(() => {})
   }, [])
 
@@ -142,7 +165,19 @@ export default function App() {
     }))
     const invalid = payloads.find((p) => !p.ex || p.ex <= 0)
     if (invalid) {
-      setError('Enter ex-showroom price for all vehicles.')
+      setError('Enter ex-showroom price (> 0) for all vehicles.')
+      setLoading(false)
+      return
+    }
+    const badMileage = payloads.find((p) => !p.mileage || p.mileage <= 0)
+    if (badMileage) {
+      setError('Mileage / range must be greater than 0 for all vehicles.')
+      setLoading(false)
+      return
+    }
+    const badKm = payloads.find((p) => !p.ann_km || p.ann_km <= 0)
+    if (badKm) {
+      setError('Annual km driven must be greater than 0 for all vehicles.')
       setLoading(false)
       return
     }
@@ -176,7 +211,7 @@ export default function App() {
   const activeVehicles = vehicles.slice(0, vehicleCount)
   const VCOLORS = ['#d4a017', '#1971c2', '#2f9e44']
 
-  const makeSetState = (idx) => (upd) => setVehicle(idx, upd)
+  const makeSetState = useCallback((idx) => (upd) => setVehicle(idx, upd), [])
 
   const renderStepForVehicles = (StepComponent, extraProps = {}) => {
     if (vehicleCount === 1) {
@@ -224,6 +259,15 @@ export default function App() {
           </p>
         )}
       </header>
+
+      {backendDown && (
+        <div style={{ padding: '12px 16px', background: 'rgba(212,160,23,0.12)', border: '1px solid var(--acc)', borderRadius: 8, marginBottom: 16, fontSize: 13 }}>
+          <strong>Backend is starting up or unreachable.</strong> Please wait a moment and refresh, or{' '}
+          <a href="https://kapil433.github.io/TCO-Calculator/legacy.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)', fontWeight: 600 }}>
+            use the standalone calculator
+          </a>.
+        </div>
+      )}
 
       <WizardLayout onCalculate={handleCalculate} loading={loading}>
         {/* Step 0: State & Years — always shared, single card */}

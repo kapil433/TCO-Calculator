@@ -1,10 +1,10 @@
 """IRDAI and TCO constants."""
 
 # IDV depreciation (year 1-15) — IRDAI schedule
-IDV_D = [0.05, 0.15, 0.30, 0.40, 0.50, 0.55, 0.60, 0.65, 0.68, 0.70, 0.72, 0.74, 0.76, 0.78, 0.80]
+IDV_D = [0.05, 0.15, 0.20, 0.30, 0.40, 0.50, 0.55, 0.60, 0.65, 0.68, 0.70, 0.72, 0.74, 0.76, 0.78]
 
 # Third party premium (₹/yr) by engine class
-TP = {"small": 2094, "mid": 3416, "large": 7890}
+TP = {"small": 2094, "mid": 3416, "large": 7897}
 PA_COVER = 750
 INS_GST = 0.18
 

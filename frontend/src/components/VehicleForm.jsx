@@ -12,8 +12,10 @@ const FUEL_OPTIONS = [
 
 const INSURANCE_ADDONS = [
   { key: 'zeroDep', label: 'Zero Depreciation (~20% of OD)', rate: 0.2, maxYr: 5 },
-  { key: 'engineProtect', label: 'Engine & Gearbox Protect (~₹1,200/yr)', flat: 1200 },
+  { key: 'engineProtect', label: 'Engine & Gearbox Protect (~₹1,200/yr)', flat: 1200, hideForEV: true },
   { key: 'rsa', label: 'Roadside Assistance (~₹599/yr)', flat: 599 },
+  { key: 'keyProtect', label: 'Key & Lock Replacement (~₹399/yr)', flat: 399 },
+  { key: 'consumables', label: 'Consumables Cover (~₹500/yr)', flat: 500 },
   { key: 'returnToInvoice', label: 'Return to Invoice (~10% OD, yr 1–3)', rate: 0.1, maxYr: 3 },
 ]
 
@@ -106,13 +108,17 @@ export function StepVehicle({ v, setState, brands, modelsByBrand, onLoadModels }
       </div>
       <div className="flex-2" style={{ marginTop: 12 }}>
         <div>
-          <label>Ex-showroom price (₹)</label>
+          <label>Ex-showroom price (₹) <span style={{ color: 'var(--red)' }}>*</span></label>
           <input
             type="number"
             value={numVal(v.ex)}
             onChange={(e) => setState({ ex: numSet(e.target.value) })}
             min={100000} step={50000} placeholder="e.g. 1000000"
+            aria-invalid={v.ex !== '' && v.ex <= 0 ? 'true' : undefined}
+            aria-describedby="ex-hint"
+            style={v.ex !== '' && v.ex <= 0 ? { borderColor: 'var(--red)' } : {}}
           />
+          {v.ex !== '' && v.ex <= 0 && <span id="ex-hint" className="hint" style={{ color: 'var(--red)' }}>Required: enter a price greater than 0</span>}
         </div>
         <div>
           <label>Accessories / extras (₹)</label>
@@ -127,12 +133,17 @@ export function StepVehicle({ v, setState, brands, modelsByBrand, onLoadModels }
 export function StepTaxCess({ v, setState, stateCode }) {
   const [taxData, setTaxData] = useState({ tax: 0, rate_pct: 0, state_note: '' })
   const [cessData, setCessData] = useState(null)
+  const [taxLoading, setTaxLoading] = useState(false)
+  const [taxError, setTaxError] = useState(null)
   const isEV = v.fuel === 'ev'
 
   useEffect(() => {
     if (stateCode && v.fuel && v.ex > 0) {
-      getTax(stateCode, v.fuel, v.ex).then(setTaxData).catch(() => {})
-      getCessBreakdown(stateCode, v.fuel, v.ex).then(setCessData).catch(() => setCessData(null))
+      setTaxLoading(true); setTaxError(null)
+      Promise.all([
+        getTax(stateCode, v.fuel, v.ex).then(setTaxData),
+        getCessBreakdown(stateCode, v.fuel, v.ex).then(setCessData).catch(() => setCessData(null)),
+      ]).catch(() => setTaxError('Could not load tax data')).finally(() => setTaxLoading(false))
     } else {
       setTaxData({ tax: 0, rate_pct: 0, state_note: '' })
       setCessData(null)
@@ -146,6 +157,8 @@ export function StepTaxCess({ v, setState, stateCode }) {
   return (
     <Card title="Life tax, cess & on-road price">
       <p className="hint">Auto-calculated from state + fuel + ex-showroom. Override if you have exact RTO quote.</p>
+      {taxLoading && <p className="hint" style={{ color: 'var(--acc)' }} aria-live="polite">Loading tax data...</p>}
+      {taxError && <p className="hint" style={{ color: 'var(--red)' }} aria-live="polite">{taxError}</p>}
       {taxData.state_note && <p className="hint" style={{ marginTop: 4, fontStyle: 'italic' }}>{taxData.state_note}</p>}
 
       <div className="flex-2" style={{ marginTop: 10 }}>
@@ -272,12 +285,16 @@ export function StepFinance({ v, setState }) {
 /* ─── Step 5: Insurance ─── */
 export function StepInsurance({ v, setState, numYears }) {
   const [preview, setPreview] = useState(null)
+  const [insLoading, setInsLoading] = useState(false)
+  const [insError, setInsError] = useState(null)
 
   useEffect(() => {
     if (v.ex > 0) {
+      setInsLoading(true); setInsError(null)
       getInsurancePreview(v.ex, v.eng || 'mid', v.fuel || 'petrol', numYears, v.ncb_mode || 'max')
         .then(setPreview)
-        .catch(() => setPreview(null))
+        .catch(() => { setPreview(null); setInsError('Could not load insurance preview') })
+        .finally(() => setInsLoading(false))
     } else {
       setPreview(null)
     }
@@ -286,6 +303,8 @@ export function StepInsurance({ v, setState, numYears }) {
   return (
     <Card title="Insurance">
       <p className="hint">IRDAI formula: IDV × OD rate + TP + PA. Select engine size for TP slab.</p>
+      {insLoading && <p className="hint" style={{ color: 'var(--acc)' }} aria-live="polite">Loading insurance preview...</p>}
+      {insError && <p className="hint" style={{ color: 'var(--red)' }} aria-live="polite">{insError}</p>}
       <div className="flex-2" style={{ marginTop: 10 }}>
         <div>
           <label>Engine / motor size</label>
@@ -356,7 +375,7 @@ export function StepInsurance({ v, setState, numYears }) {
 
       <div style={{ marginTop: 14 }}>
         <label style={{ marginBottom: 8 }}>Add-ons</label>
-        {INSURANCE_ADDONS.map((a) => (
+        {INSURANCE_ADDONS.filter((a) => !(a.hideForEV && v.fuel === 'ev')).map((a) => (
           <label key={a.key} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, fontWeight: 400 }}>
             <input
               type="checkbox"
@@ -374,19 +393,21 @@ export function StepInsurance({ v, setState, numYears }) {
 /* ─── Step 6: Running cost ─── */
 export function StepRunning({ v, setState, stateCode }) {
   const isEV = v.fuel === 'ev'
+  const [fuelLoading, setFuelLoading] = useState(false)
 
   useEffect(() => {
     if (!stateCode || isEV) return
+    setFuelLoading(true)
     getFuelPrices(stateCode).then((prices) => {
       const fuelKey = v.fuel === 'strong_hybrid' ? 'petrol' : v.fuel
       const price = prices[fuelKey]
       if (price != null && v.fuel_price !== price) setState({ fuel_price: price })
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setFuelLoading(false))
   }, [stateCode, v.fuel])
 
   return (
     <Card title="Running cost">
-      <p className="hint">Fuel price auto-filled from state average. Editable.</p>
+      <p className="hint">Fuel price auto-filled from state average. Editable.{fuelLoading && ' Loading...'}</p>
       <div className="flex-2" style={{ marginTop: 10 }}>
         <div>
           <label>{isEV ? 'Range (km/kWh)' : v.fuel === 'cng' ? 'Mileage (km/kg)' : 'Mileage (km/L)'}</label>

@@ -1,7 +1,4 @@
-import { useState, useRef, useMemo, Fragment } from 'react'
-import { jsPDF } from 'jspdf'
-import * as XLSX from 'xlsx'
-import html2canvas from 'html2canvas'
+import { useState, useRef, useMemo, useCallback, memo, Fragment } from 'react'
 import { trackTabView, trackExport } from '../analytics'
 import {
   Chart as ChartJS,
@@ -69,7 +66,7 @@ function getBadges(results) {
 }
 
 /* ═══════ TAB 1: Summary ═══════ */
-function SummaryTab({ results, numYears, summaryRef }) {
+const SummaryTab = memo(function SummaryTab({ results, numYears, summaryRef }) {
   const badges = getBadges(results)
   const cats = getCats(results, numYears)
   const multi = results.length > 1
@@ -126,10 +123,10 @@ function SummaryTab({ results, numYears, summaryRef }) {
       )}
     </div>
   )
-}
+})
 
 /* ═══════ TAB 2: Cost Analysis ═══════ */
-function CostAnalysisTab({ results, numYears }) {
+const CostAnalysisTab = memo(function CostAnalysisTab({ results, numYears }) {
   const cats = getCats(results, numYears)
   const multi = results.length > 1
 
@@ -234,10 +231,10 @@ function CostAnalysisTab({ results, numYears }) {
       </div>
     </div>
   )
-}
+})
 
 /* ═══════ TAB 3: Resale & Depreciation ═══════ */
-function ResaleDepTab({ results, numYears }) {
+const ResaleDepTab = memo(function ResaleDepTab({ results, numYears }) {
   const allYears = Array.from({ length: 15 }, (_, i) => i + 1)
 
   const depCurveData = {
@@ -356,10 +353,10 @@ function ResaleDepTab({ results, numYears }) {
       ))}
     </div>
   )
-}
+})
 
 /* ═══════ TAB 4: Year-by-Year ═══════ */
-function YearByYearTab({ results, numYears }) {
+const YearByYearTab = memo(function YearByYearTab({ results, numYears }) {
   const maxYears = Math.max(...results.map((r) => r.yearByYear?.length || 0))
   const yearLabels = Array.from({ length: maxYears }, (_, i) => `Yr ${i + 1}`)
 
@@ -439,10 +436,10 @@ function YearByYearTab({ results, numYears }) {
       </div>
     </div>
   )
-}
+})
 
 /* ═══════ TAB 5: Smart Insights ═══════ */
-function InsightsTab({ results, numYears }) {
+const InsightsTab = memo(function InsightsTab({ results, numYears }) {
   const multi = results.length > 1
   const cats = getCats(results, numYears)
 
@@ -672,7 +669,7 @@ function InsightsTab({ results, numYears }) {
       ))}
     </div>
   )
-}
+})
 
 /* ═══════ Per-tab image download button ═══════ */
 function DownloadTabImage({ contentRef, tabName, numYears }) {
@@ -683,6 +680,7 @@ function DownloadTabImage({ contentRef, tabName, numYears }) {
     trackExport(`image_${tabName}`)
     setSaving(true)
     try {
+      const { default: html2canvas } = await import('html2canvas')
       const canvas = await html2canvas(contentRef.current, {
         scale: 2, useCORS: true, backgroundColor: '#f8f9fa', logging: false,
       })
@@ -739,8 +737,13 @@ function findSafeCutY(canvas, targetY, searchRange) {
   return bestY
 }
 
-async function generatePDFFromUI(setActiveTab, contentRef, numYears, results, setExporting) {
+async function generatePDFFromUI(setActiveTab, contentRef, numYears, results, setExporting, setPdfProgress) {
   setExporting(true)
+  setPdfProgress?.('Loading export libraries...')
+  const [{ jsPDF }, { default: html2canvas_ }] = await Promise.all([
+    import('jspdf'),
+    import('html2canvas'),
+  ])
   const savedTab = document.querySelector('.results-tab.active')?.textContent || ''
   const doc = new jsPDF('p', 'mm', 'a4')
   const pw = doc.internal.pageSize.getWidth()
@@ -770,7 +773,7 @@ async function generatePDFFromUI(setActiveTab, contentRef, numYears, results, se
 
     const el = contentRef.current
     if (!el) return
-    const canvas = await html2canvas(el, {
+    const canvas = await html2canvas_(el, {
       scale: 2, useCORS: true, backgroundColor: '#f8f9fa',
       windowWidth: RENDER_WIDTH, logging: false,
       onclone: (doc) => {
@@ -821,8 +824,10 @@ async function generatePDFFromUI(setActiveTab, contentRef, numYears, results, se
 
   try {
     for (let t = 0; t < TABS.length; t++) {
+      setPdfProgress?.(`Capturing tab ${t + 1} of ${TABS.length}: ${TABS[t]}...`)
       await captureTab(t)
     }
+    setPdfProgress?.('Finalizing PDF...')
     const pageCount = doc.internal.getNumberOfPages()
     for (let p = 1; p <= pageCount; p++) {
       doc.setPage(p)
@@ -834,11 +839,13 @@ async function generatePDFFromUI(setActiveTab, contentRef, numYears, results, se
     const idx = TABS.indexOf(savedTab)
     setActiveTab(idx >= 0 ? idx : 0)
     setExporting(false)
+    setPdfProgress?.(null)
   }
 }
 
 /* ═══════ Excel Export — single comprehensive sheet ═══════ */
-function generateExcel(results, numYears) {
+async function generateExcel(results, numYears) {
+  const XLSX = await import('xlsx')
   const wb = XLSX.utils.book_new()
   const cats = getCats(results, numYears)
   const rows = []
@@ -930,13 +937,13 @@ function generateExcel(results, numYears) {
 }
 
 /* ═══════ Export Bar ═══════ */
-function ExportBar({ results, numYears, setActiveTab, contentRef, setExporting, exporting }) {
+function ExportBar({ results, numYears, setActiveTab, contentRef, setExporting, exporting, setPdfProgress, pdfProgress }) {
   return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      <button type="button" className="btn-secondary" disabled={exporting} onClick={() => { trackExport('pdf'); generatePDFFromUI(setActiveTab, contentRef, numYears, results, setExporting) }}>
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      <button type="button" className="btn-secondary" disabled={exporting} onClick={() => { trackExport('pdf'); generatePDFFromUI(setActiveTab, contentRef, numYears, results, setExporting, setPdfProgress) }}>
         {exporting ? 'Generating...' : 'PDF Report'}
       </button>
-      <button type="button" className="btn-secondary" onClick={() => { trackExport('excel'); generateExcel(results, numYears) }}>Excel</button>
+      <button type="button" className="btn-secondary" disabled={exporting} onClick={() => { trackExport('excel'); generateExcel(results, numYears) }}>Excel</button>
     </div>
   )
 }
@@ -945,6 +952,7 @@ function ExportBar({ results, numYears, setActiveTab, contentRef, setExporting, 
 export default function ResultsPage({ results, numYears, onBack }) {
   const [activeTab, setActiveTab] = useState(0)
   const [exporting, setExporting] = useState(false)
+  const [pdfProgress, setPdfProgress] = useState(null)
   const summaryRef = useRef(null)
   const contentRef = useRef(null)
 
@@ -955,22 +963,25 @@ export default function ResultsPage({ results, numYears, onBack }) {
       {exporting && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(255,255,255,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
           <div style={{ width: 40, height: 40, border: '3px solid var(--s2)', borderTopColor: 'var(--acc)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          <p style={{ fontWeight: 600, color: 'var(--t2)' }}>Generating PDF — capturing all tabs...</p>
+          <p style={{ fontWeight: 600, color: 'var(--t2)' }}>{pdfProgress || 'Generating PDF...'}</p>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       )}
 
       <div className="results-header">
         <button type="button" className="btn-secondary" onClick={onBack} style={{ padding: '8px 16px' }}>← Back</button>
-        <div className="results-tabs">
+        <div className="results-tabs" role="tablist" aria-label="Result sections" onKeyDown={(e) => {
+          if (e.key === 'ArrowRight') { const next = (activeTab + 1) % TABS.length; setActiveTab(next); e.target.parentNode.children[next]?.focus() }
+          if (e.key === 'ArrowLeft') { const prev = (activeTab - 1 + TABS.length) % TABS.length; setActiveTab(prev); e.target.parentNode.children[prev]?.focus() }
+        }}>
           {TABS.map((tab, i) => (
-            <button key={tab} type="button" className={`results-tab${i === activeTab ? ' active' : ''}`} onClick={() => { setActiveTab(i); trackTabView(tab) }}>{tab}</button>
+            <button key={tab} type="button" role="tab" aria-selected={i === activeTab} aria-controls={`tabpanel-${i}`} tabIndex={i === activeTab ? 0 : -1} className={`results-tab${i === activeTab ? ' active' : ''}`} onClick={() => { setActiveTab(i); trackTabView(tab) }}>{tab}</button>
           ))}
         </div>
-        <ExportBar results={results} numYears={numYears} setActiveTab={setActiveTab} contentRef={contentRef} setExporting={setExporting} exporting={exporting} />
+        <ExportBar results={results} numYears={numYears} setActiveTab={setActiveTab} contentRef={contentRef} setExporting={setExporting} exporting={exporting} setPdfProgress={setPdfProgress} pdfProgress={pdfProgress} />
       </div>
 
-      <div ref={contentRef} data-pdf-content style={{ marginTop: 20 }}>
+      <div ref={contentRef} data-pdf-content role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={TABS[activeTab]} style={{ marginTop: 20 }}>
         {activeTab === 0 && <SummaryTab results={results} numYears={numYears} summaryRef={summaryRef} />}
         {activeTab === 1 && <CostAnalysisTab results={results} numYears={numYears} />}
         {activeTab === 2 && <ResaleDepTab results={results} numYears={numYears} />}

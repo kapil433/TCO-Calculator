@@ -64,6 +64,7 @@ def calc_vehicle(
     num_years = min(max(1, int(num_years)), 15)
     if ex <= 0:
         return {}
+    mileage = max(mileage, 0.1)
 
     tax_amt = tax_override if tax_override is not None and tax_override > 0 else get_tax(state, fuel, ex)
     on_road = ex + tax_amt + rto + acc + (charger if fuel == "ev" else 0)
@@ -112,8 +113,12 @@ def calc_vehicle(
             tyre_n += tyre_set_cost
 
     # Battery provision (EV)
+    CAPACITY_BY_ENG = {"small": 20, "mid": 32, "large": 50}
     batt_provision_n = 0
     batt_annual = 0
+    if fuel == "ev" and include_battery:
+        if battery_kwh <= 0:
+            battery_kwh = CAPACITY_BY_ENG.get(eng, 32)
     if fuel == "ev" and include_battery and battery_kwh > 0:
         cost_per_kwh = 20000
         useful_years = 8

@@ -4,8 +4,33 @@
  */
 const BASE = import.meta.env.VITE_API_URL || ''
 
+let _backendStatus = 'unknown'
+export function getBackendStatus() { return _backendStatus }
+
+async function fetchWithRetry(url, opts = {}, retries = 3, baseDelay = 1500) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const r = await fetch(url, opts)
+      if (r.ok) { _backendStatus = 'up'; return r }
+      if (r.status >= 500 && i < retries) {
+        _backendStatus = 'waking'
+        await new Promise((res) => setTimeout(res, baseDelay * Math.pow(2, i)))
+        continue
+      }
+      return r
+    } catch (err) {
+      _backendStatus = i < retries ? 'waking' : 'down'
+      if (i < retries) {
+        await new Promise((res) => setTimeout(res, baseDelay * Math.pow(2, i)))
+      } else {
+        throw err
+      }
+    }
+  }
+}
+
 export async function getStates() {
-  const r = await fetch(`${BASE}/api/v1/tco/states`)
+  const r = await fetchWithRetry(`${BASE}/api/v1/tco/states`)
   if (!r.ok) throw new Error('Failed to fetch states')
   return r.json()
 }

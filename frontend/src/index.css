@@ -44,6 +44,10 @@ input:focus, select:focus {
   border-color: var(--acc);
   box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.15);
 }
+button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
 label { display: block; font-size: 12px; font-weight: 600; color: var(--t2); margin-bottom: 6px; }
 .hint { font-size: 11px; color: var(--t3); margin-top: 4px; }
 
@@ -170,8 +174,8 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--t2); mar
   padding: 0;
 }
 .wizard-dot-num {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -453,13 +457,18 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--t2); mar
   line-height: 1.55;
 }
 
+/* ── Mobile helpers ── */
+@media (max-width: 640px) {
+  .hide-mobile { display: none !important; }
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   body { font-size: 14px; }
   .card { padding: 16px; }
   .results-header { flex-direction: column; align-items: stretch; gap: 8px; }
   .results-tabs { justify-content: flex-start; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 0; }
-  .results-tab { padding: 6px 10px; font-size: 11px; flex-shrink: 0; }
+  .results-tab { padding: 10px 12px; font-size: 11px; flex-shrink: 0; min-height: 44px; }
   .summary-grid { grid-template-columns: 1fr !important; }
   .summary-tco { font-size: 24px; }
   .charts-row { grid-template-columns: 1fr; }
@@ -474,7 +483,7 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--t2); mar
 }
 @media (max-width: 640px) {
   .wizard-indicator { gap: 2px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .wizard-dot-num { width: 26px; height: 26px; font-size: 10px; }
+  .wizard-dot-num { width: 34px; height: 34px; font-size: 11px; }
   .wizard-dot-label { font-size: 8px; max-width: 52px; }
   .wizard-nav { gap: 8px; }
   .flex-2, .flex-3 { grid-template-columns: 1fr; }

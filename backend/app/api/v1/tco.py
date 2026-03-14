@@ -2,7 +2,8 @@
 TCO API — reference data + calculate endpoint.
 """
 
-from fastapi import APIRouter, HTTPException
+import os
+from fastapi import APIRouter, HTTPException, Header, Response
 from pydantic import BaseModel, Field
 
 from app.data.states import (
@@ -20,8 +21,9 @@ router = APIRouter(prefix="/tco", tags=["tco"])
 # ─── Reference data ─────────────────────────────────────────────────────
 
 @router.get("/states")
-def list_states():
+def list_states(response: Response):
     """List state codes and names for dropdown."""
+    response.headers["Cache-Control"] = "public, max-age=3600"
     return [
         {"code": c, "name": STATE_NAMES.get(c, c)}
         for c in STATE_CODES
@@ -38,9 +40,16 @@ def state_info(state_code: str):
 
 
 @router.get("/fuel-prices")
-def fuel_prices_all():
+def fuel_prices_all(response: Response):
     """All state fuel prices (Jan 2026 baseline)."""
+    response.headers["Cache-Control"] = "public, max-age=3600"
     return FUEL_PRICES
+
+
+@router.get("/fuel-prices/live/meta")
+def fuel_prices_live_meta():
+    """Full status: source, last_updated, age_hours, is_stale, next_refresh_hint."""
+    return get_fuel_price_status()
 
 
 @router.get("/fuel-prices/{state_code}")
@@ -51,15 +60,12 @@ def fuel_prices_state(state_code: str):
     return prices.get(code, prices.get("MH", {}))
 
 
-@router.get("/fuel-prices/live/meta")
-def fuel_prices_live_meta():
-    """Full status: source, last_updated, age_hours, is_stale, next_refresh_hint."""
-    return get_fuel_price_status()
-
-
 @router.post("/fuel-prices/refresh")
-def fuel_prices_refresh():
-    """Manually trigger a fuel price scrape (skips if fresh unless force=true)."""
+def fuel_prices_refresh(x_refresh_key: str | None = Header(None)):
+    """Manually trigger a fuel price scrape. Requires X-Refresh-Key header."""
+    expected = os.environ.get("REFRESH_KEY", "")
+    if not expected or x_refresh_key != expected:
+        raise HTTPException(403, "Forbidden — invalid or missing X-Refresh-Key")
     try:
         from scripts.scrape_fuel_prices import run_scrape
         result = run_scrape(force=True)
@@ -161,8 +167,9 @@ def maintenance_schedule(fuel: str = "petrol"):
 
 
 @router.get("/brands")
-def brands():
+def brands(response: Response):
     """Car brands for dropdown."""
+    response.headers["Cache-Control"] = "public, max-age=3600"
     return get_brands()
 
 
