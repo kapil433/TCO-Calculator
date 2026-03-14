@@ -36,7 +36,7 @@ const defaultVehicle = () => ({
   eng: 'mid',
   ins_override_yr1: null,
   tyre_cycle_yrs: 3,
-  tyre_set_cost: 0,
+  tyre_set_cost: 20000,
   addons: {},
   battery_kwh: 32,
   include_battery: false,

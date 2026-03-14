@@ -316,32 +316,52 @@ def _mileage_factor(ann_km: float, year: int) -> float:
     return max(0.80, min(1.12, factor))
 
 
+EV_DEGRADATION_PENALTY = {
+    5: -0.03, 6: -0.03, 7: -0.03, 8: -0.03, 9: -0.03,
+    10: -0.04, 11: -0.04, 12: -0.04, 13: -0.04, 14: -0.04,
+}
+
+
+def _extend_to_15(base5: list[float], fuel_ext: list[float]) -> list[float]:
+    """Extend a 5-year resale array to 15 years using decay ratios from the fuel-type curve.
+    This matches the legacy extendTo15 approach."""
+    arr = list(base5)
+    for i in range(5, 15):
+        decay = fuel_ext[i] / fuel_ext[i - 1] if fuel_ext[i - 1] else 0.85
+        arr.append(round(arr[-1] * decay, 3))
+    return arr
+
+
 def get_resale_array(
     brand: str | None, model: str | None, fuel: str,
     ann_km: float = BASELINE_ANN_KM,
 ) -> tuple[list[float], str, str]:
     """Return (resale_pct_arr[0..14] for year 1..15, resale_src_label, eng).
-    Resale percentages are adjusted for annual kilometers driven."""
+    Resale percentages are adjusted for annual kilometers driven.
+    Uses legacy decay-ratio extension for model/brand-specific curves."""
     fuel_key = fuel if fuel in RESALE_EXT else "petrol"
     base_ext = RESALE_EXT[fuel_key]
     eng = "mid"
     src = f"{fuel_key.upper()} fuel-type curve"
+
     if brand and brand in CAR_DB:
         eng = CAR_DB[brand]["brandEng"]
         if model and model in CAR_DB[brand]["models"]:
             m = CAR_DB[brand]["models"][model]
-            r5 = m["resale"]
-            scale = r5[4] / base_ext[4] if base_ext[4] else 1
-            ext = r5 + [round(base_ext[i] * scale, 4) for i in range(5, 15)]
+            ext = _extend_to_15(m["resale"], base_ext)
             eng = m["eng"]
             src = f"{brand} {model} (model)"
         else:
-            r5 = CAR_DB[brand]["brandResale"]
-            scale = r5[4] / base_ext[4] if base_ext[4] else 1
-            ext = r5 + [round(base_ext[i] * scale, 4) for i in range(5, 15)]
+            ext = _extend_to_15(CAR_DB[brand]["brandResale"], base_ext)
             src = f"{brand} (brand avg)"
     else:
         ext = list(base_ext)
+
+    if fuel == "ev":
+        for i in range(len(ext)):
+            penalty = EV_DEGRADATION_PENALTY.get(i, 0)
+            if penalty:
+                ext[i] = max(0.05, round(ext[i] * (1 + penalty), 4))
 
     adjusted = []
     for yr_idx, pct in enumerate(ext):

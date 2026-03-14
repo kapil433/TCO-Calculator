@@ -86,7 +86,20 @@ export function StepVehicle({ v, setState, brands, modelsByBrand, onLoadModels }
         </div>
         <div>
           <label>Fuel type</label>
-          <select value={v.fuel || 'petrol'} onChange={(e) => setState({ fuel: e.target.value })}>
+          <select value={v.fuel || 'petrol'} onChange={(e) => {
+            const f = e.target.value
+            const mileageDefaults = { petrol: 18, diesel: 22, cng: 20, ev: 5.5, strong_hybrid: 19 }
+            const tyreDefaults = { petrol: 20000, diesel: 22000, cng: 18000, ev: 24000, strong_hybrid: 22000 }
+            const tyreCycleDefaults = { petrol: 3, diesel: 3, cng: 3, ev: 4, strong_hybrid: 3 }
+            const escalDefaults = { petrol: 5, diesel: 5, cng: 3, ev: 3, strong_hybrid: 5 }
+            setState({
+              fuel: f,
+              mileage: mileageDefaults[f] || 18,
+              tyre_set_cost: tyreDefaults[f] || 20000,
+              tyre_cycle_yrs: tyreCycleDefaults[f] || 3,
+              fuel_escal_pct: escalDefaults[f] || 5,
+            })
+          }}>
             {FUEL_OPTIONS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
           </select>
         </div>

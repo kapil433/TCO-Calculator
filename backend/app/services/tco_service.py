@@ -221,18 +221,18 @@ def build_yearly_profile(r: dict) -> list[dict]:
     ann_km = r.get("_annKm", 15000)
     mileage = r.get("_mil", 18)
     fuel_price = r.get("_fprice", 100)
+    fuel_escal_pct = r.get("_fuelEscalPct", 5)
+    escal_rate = fuel_escal_pct / 100
     tyre_cycle = r.get("_tyreCycleYrs", 3)
     tyre_cost = r.get("_tyreSetCost", 0)
     ins_arr = r.get("insArr", [])
     resale_arr = r.get("_resaleArr", [])
     batt_annual = r.get("_battAnnual", 0)
     includes_batt = r.get("_includesBatt", False)
-    fuel_escal = r.get("_fprice", 100)
     cash = r.get("cash", True)
     total_int = r.get("totalInt", 0)
     addon_total = r.get("addonTotal", 0)
-    fuel_key = r.get("fuel", "petrol")
-    maint_list = r.get("_maintList", MAINT.get(fuel_key, MAINT["petrol"]))
+    maint_list = r.get("_maintList", MAINT.get(r.get("fuel", "petrol"), MAINT["petrol"]))
 
     profile = []
     cum_cost = on_road
@@ -245,8 +245,7 @@ def build_yearly_profile(r: dict) -> list[dict]:
         maint_yr = maint_list[yr - 1] if yr - 1 < len(maint_list) else maint_list[-1]
         tyre_yr = tyre_cost if tyre_cycle and yr % tyre_cycle == 0 else 0
         batt_yr = round(batt_annual) if includes_batt else 0
-        escal_pct = r.get("fuel_escal_pct", 5) if "fuel_escal_pct" in r else 5
-        fuel_ann = round((ann_km / mileage) * fuel_price * (1.05 ** (yr - 1)))
+        fuel_ann = round((ann_km / mileage) * fuel_price * ((1 + escal_rate) ** (yr - 1)))
         addon_yr = round(addon_total / num_years) if yr <= num_years else 0
 
         year_cost = ins_yr + maint_yr + tyre_yr + batt_yr + fuel_ann + addon_yr
