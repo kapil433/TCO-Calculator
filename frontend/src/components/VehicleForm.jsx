@@ -120,8 +120,7 @@ export function StepTaxCess({ v, setState, stateCode }) {
 
   const baseTax = taxData.tax || 0
   const taxAmt = v.tax_override != null && v.tax_override > 0 ? v.tax_override : baseTax
-  const cessAmt = cessData?.hasCess ? cessData.cessAmt : 0
-  const onRoad = (Number(v.ex) || 0) + taxAmt + cessAmt + (Number(v.rto) || 2700) + (Number(v.acc) || 0) + (isEV ? (Number(v.charger) || 0) : 0)
+  const onRoad = (Number(v.ex) || 0) + taxAmt + (Number(v.rto) || 2700) + (Number(v.acc) || 0) + (isEV ? (Number(v.charger) || 0) : 0)
 
   return (
     <Card title="Life tax, cess & on-road price">
@@ -150,11 +149,20 @@ export function StepTaxCess({ v, setState, stateCode }) {
       {cessData?.hasCess && (
         <div style={{ marginTop: 14, padding: 12, background: 'var(--s1)', borderRadius: 8, fontSize: 12 }}>
           <strong style={{ color: 'var(--acc)' }}>{cessData.cessName}</strong>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 6 }}>
-            <span>Base tax: {formatRs(cessData.baseTaxAmt)} ({cessData.baseTaxRatePct}%)</span>
-            <span>Cess: {formatRs(cessData.cessAmt)} ({cessData.cessRatePct}%)</span>
-            <span>Total: {formatRs(cessData.totalTaxAmt)}</span>
-            <span className="hint">Source: {cessData.source}</span>
+          {cessData.cessRate > 0 ? (
+            <span style={{ marginLeft: 6, color: 'var(--t2)' }}>· <strong>{cessData.cessRate}%</strong> {cessData.basis}</span>
+          ) : (
+            <span style={{ marginLeft: 6, color: 'var(--t2)' }}>· {cessData.basis}</span>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+            <span>Base life tax <span style={{ color: 'var(--t2)' }}>({cessData.baseTaxRatePct}%)</span> = <strong>{formatRs(cessData.baseTaxAmt)}</strong></span>
+            {cessData.cessRate > 0 ? (
+              <span>{cessData.cessName} <span style={{ color: 'var(--t2)' }}>({cessData.cessRate}%)</span> = <strong style={{ color: 'var(--acc)' }}>{formatRs(cessData.cessAmt)}</strong></span>
+            ) : (
+              <span>{cessData.cessName} = <strong style={{ color: 'var(--acc)' }}>{cessData.cessAmt > 0 ? formatRs(cessData.cessAmt) : 'Nil'}</strong></span>
+            )}
+            <span>Total life tax at RTO = <strong style={{ color: 'var(--green)' }}>{formatRs(cessData.totalTaxAmt)}</strong></span>
+            <span className="hint">Effective: {cessData.effective} · Source: {cessData.source}</span>
           </div>
         </div>
       )}
