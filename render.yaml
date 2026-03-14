@@ -1,13 +1,10 @@
 services:
   - type: web
     name: tco-calculator-api
-    runtime: python
+    runtime: docker
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: CORS_ORIGINS
         value: https://kapil433.github.io
-      - key: PYTHON_VERSION
-        value: "3.11"
     plan: free
