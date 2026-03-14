@@ -1,0 +1,222 @@
+{
+  "last_updated": "2026-03-14T08:35:47.870591+00:00",
+  "source": "mypetrolprice.com",
+  "prices": {
+    "AN": {
+      "petrol": 82.46,
+      "diesel": 78.05,
+      "ev": 4.0,
+      "cng": null
+    },
+    "AP": {
+      "petrol": 109.29,
+      "diesel": 97.16,
+      "cng": 90.33,
+      "ev": 4.0
+    },
+    "AR": {
+      "petrol": 90.9,
+      "diesel": 80.4,
+      "ev": 4.0,
+      "cng": null
+    },
+    "AS": {
+      "petrol": 98.81,
+      "diesel": 90.02,
+      "cng": 87.16,
+      "ev": 4.0
+    },
+    "BR": {
+      "petrol": 105.7,
+      "diesel": 92.72,
+      "cng": 92.39,
+      "ev": 4.0
+    },
+    "CH": {
+      "petrol": 94.28,
+      "diesel": 82.44,
+      "cng": 92.75,
+      "ev": 4.0
+    },
+    "CG": {
+      "petrol": 100.42,
+      "diesel": 94.05,
+      "cng": 85.99,
+      "ev": 4.0
+    },
+    "DN": {
+      "petrol": 92.44,
+      "diesel": 87.93,
+      "cng": 79.26,
+      "ev": 4.0
+    },
+    "DL": {
+      "petrol": 94.86,
+      "diesel": 87.75,
+      "cng": 77.26,
+      "ev": 4.0
+    },
+    "GA": {
+      "petrol": 96.4,
+      "diesel": 88.16,
+      "cng": 92.0,
+      "ev": 4.0
+    },
+    "GJ": {
+      "petrol": 94.79,
+      "diesel": 90.47,
+      "cng": 81.53,
+      "ev": 4.0
+    },
+    "HR": {
+      "petrol": 95.32,
+      "diesel": 88.15,
+      "cng": 87.79,
+      "ev": 4.0
+    },
+    "HP": {
+      "petrol": 94.39,
+      "diesel": 86.7,
+      "cng": 92.11,
+      "ev": 4.0
+    },
+    "JK": {
+      "petrol": 98.96,
+      "diesel": 85.61,
+      "cng": 93.31,
+      "ev": 4.0
+    },
+    "JH": {
+      "petrol": 98.48,
+      "diesel": 93.21,
+      "cng": 90.37,
+      "ev": 4.0
+    },
+    "KA": {
+      "petrol": 103.17,
+      "diesel": 91.26,
+      "cng": 86.09,
+      "ev": 4.0
+    },
+    "KL": {
+      "petrol": 105.45,
+      "diesel": 94.48,
+      "cng": 89.92,
+      "ev": 4.0
+    },
+    "MP": {
+      "petrol": 107.24,
+      "diesel": 92.62,
+      "cng": 94.42,
+      "ev": 4.0
+    },
+    "MH": {
+      "petrol": 104.68,
+      "diesel": 91.21,
+      "cng": 89.94,
+      "ev": 4.0
+    },
+    "MN": {
+      "petrol": 99.15,
+      "diesel": 85.23,
+      "ev": 4.0,
+      "cng": null
+    },
+    "ML": {
+      "petrol": 96.11,
+      "diesel": 87.46,
+      "ev": 4.0,
+      "cng": null
+    },
+    "MZ": {
+      "petrol": 99.14,
+      "diesel": 87.97,
+      "ev": 4.0,
+      "cng": null
+    },
+    "NL": {
+      "petrol": 97.18,
+      "diesel": 85.92,
+      "ev": 4.0,
+      "cng": null
+    },
+    "OD": {
+      "petrol": 101.95,
+      "diesel": 93.52,
+      "cng": 88.92,
+      "ev": 4.0
+    },
+    "PY": {
+      "petrol": 96.45,
+      "diesel": 86.5,
+      "cng": 83.95,
+      "ev": 4.0
+    },
+    "PB": {
+      "petrol": 97.36,
+      "diesel": 87.86,
+      "cng": 88.37,
+      "ev": 4.0
+    },
+    "RJ": {
+      "petrol": 105.46,
+      "diesel": 90.94,
+      "cng": 90.88,
+      "ev": 4.0
+    },
+    "SK": {
+      "petrol": 101.9,
+      "diesel": 89.1,
+      "cng": 63.62,
+      "ev": 4.0
+    },
+    "TN": {
+      "petrol": 101.72,
+      "diesel": 93.32,
+      "cng": 86.95,
+      "ev": 4.0
+    },
+    "TS": {
+      "petrol": 107.86,
+      "diesel": 96.1,
+      "cng": 94.96,
+      "ev": 4.0
+    },
+    "TR": {
+      "petrol": 97.53,
+      "diesel": 86.55,
+      "cng": 68.0,
+      "ev": 4.0
+    },
+    "UP": {
+      "petrol": 95.05,
+      "diesel": 88.04,
+      "cng": 94.1,
+      "ev": 4.0
+    },
+    "UK": {
+      "petrol": 93.75,
+      "diesel": 88.52,
+      "cng": 100.51,
+      "ev": 4.0
+    },
+    "WB": {
+      "petrol": 105.43,
+      "diesel": 92.21,
+      "cng": 92.86,
+      "ev": 4.0
+    },
+    "LA": {
+      "petrol": 96,
+      "diesel": 90,
+      "cng": 74,
+      "ev": 3.8
+    },
+    "LD": {
+      "petrol": 92,
+      "diesel": 86,
+      "cng": 72,
+      "ev": 4.0
+    }
+  }
+}
