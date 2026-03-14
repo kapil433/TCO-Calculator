@@ -410,6 +410,49 @@ label { display: block; font-size: 12px; font-weight: 600; color: var(--t2); mar
 .grade-D { background: #ffe3e3; color: #c92a2a; }
 .grade-E { background: #ffe3e3; color: #a61e4d; }
 
+/* ── Footer ── */
+.app-footer {
+  margin-top: 48px;
+  padding: 28px 0 16px;
+  border-top: 1px solid var(--bd);
+  text-align: center;
+}
+.footer-inner { max-width: 560px; margin: 0 auto; }
+.footer-brand {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--acc);
+  margin-bottom: 6px;
+}
+.footer-desc {
+  font-size: 11px;
+  color: var(--t3);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.footer-links a {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--blue);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.footer-links a:hover { color: var(--acc); text-decoration: underline; }
+.footer-sep { color: var(--t3); font-size: 11px; }
+.footer-legal {
+  font-size: 10px;
+  color: var(--t3);
+  line-height: 1.55;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   body { font-size: 14px; }

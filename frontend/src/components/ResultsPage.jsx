@@ -707,6 +707,35 @@ function DownloadTabImage({ contentRef, tabName, numYears }) {
 }
 
 /* ═══════ PDF Export — captures actual UI with html2canvas ═══════ */
+function findSafeCutY(canvas, targetY, searchRange) {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  const w = canvas.width
+  const minY = Math.max(0, Math.round(targetY - searchRange))
+  const maxY = Math.min(canvas.height - 1, Math.round(targetY))
+
+  let bestY = Math.round(targetY)
+  let bestScore = Infinity
+
+  for (let y = maxY; y >= minY; y -= 2) {
+    const row = ctx.getImageData(0, y, w, 1).data
+    const nextRow = y + 1 < canvas.height ? ctx.getImageData(0, y + 1, w, 1).data : null
+    let complexity = 0
+    for (let x = 0; x < w * 4; x += 16) {
+      if (nextRow) {
+        complexity += Math.abs(row[x] - nextRow[x]) + Math.abs(row[x + 1] - nextRow[x + 1]) + Math.abs(row[x + 2] - nextRow[x + 2])
+      }
+      const isBg = row[x] > 240 && row[x + 1] > 240 && row[x + 2] > 240
+      if (!isBg) complexity += 3
+    }
+    if (complexity < bestScore) {
+      bestScore = complexity
+      bestY = y
+    }
+    if (complexity === 0) break
+  }
+  return bestY
+}
+
 async function generatePDFFromUI(setActiveTab, contentRef, numYears, results, setExporting) {
   setExporting(true)
   const savedTab = document.querySelector('.results-tab.active')?.textContent || ''
@@ -714,52 +743,76 @@ async function generatePDFFromUI(setActiveTab, contentRef, numYears, results, se
   const pw = doc.internal.pageSize.getWidth()
   const ph = doc.internal.pageSize.getHeight()
   const margin = 8
+  const headerH = 10
+  const footerH = 8
   const usableW = pw - 2 * margin
-  const usableH = ph - 20
+  const usableContentH = ph - headerH - footerH
+  const RENDER_WIDTH = 1200
   let isFirst = true
+
+  const addHeaderFooter = (tabIndex, isTabStart) => {
+    if (isTabStart) {
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor('#d4a017')
+      doc.text(`TCO Report — ${numYears} Years — ${TABS[tabIndex]}`, margin, 7)
+      doc.setFontSize(6); doc.setFont('helvetica', 'normal'); doc.setTextColor('#868e96')
+      doc.text(new Date().toLocaleDateString('en-IN'), pw - margin, 7, { align: 'right' })
+    }
+    doc.setFontSize(5.5); doc.setFont('helvetica', 'normal'); doc.setTextColor('#adb5bd')
+    doc.text('TCO Calculator India — kapil433.github.io/TCO-Calculator', margin, ph - 3)
+  }
 
   const captureTab = async (tabIndex) => {
     setActiveTab(tabIndex)
-    await new Promise((r) => setTimeout(r, 600))
+    await new Promise((r) => setTimeout(r, 800))
 
     const el = contentRef.current
     if (!el) return
     const canvas = await html2canvas(el, {
       scale: 2, useCORS: true, backgroundColor: '#f8f9fa',
-      windowWidth: el.scrollWidth, logging: false,
+      windowWidth: RENDER_WIDTH, logging: false,
+      onclone: (doc) => {
+        const cloned = doc.querySelector('[data-pdf-content]') || doc.body
+        cloned.style.width = RENDER_WIDTH + 'px'
+      },
     })
-    const imgData = canvas.toDataURL('image/png')
-    const imgW = usableW
-    const imgH = (canvas.height / canvas.width) * imgW
-    let yOff = 0
 
-    while (yOff < imgH) {
+    const imgW = usableW
+    const pxPerMm = canvas.width / imgW
+    const searchRangePx = 80 * pxPerMm
+    let srcY = 0
+
+    while (srcY < canvas.height) {
       if (!isFirst) doc.addPage()
       isFirst = false
 
-      if (yOff === 0) {
-        doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor('#d4a017')
-        doc.text(`TCO Report — ${numYears} Years — ${TABS[tabIndex]}`, margin, 6)
-        doc.setFontSize(6); doc.setFont('helvetica', 'normal'); doc.setTextColor('#868e96')
-        doc.text(new Date().toLocaleDateString('en-IN'), pw - margin, 6, { align: 'right' })
+      const isTabStart = srcY === 0
+      const topOffset = headerH
+      const availH = usableContentH
+      const maxSrcH = availH * pxPerMm
+
+      let endSrcY = srcY + maxSrcH
+      if (endSrcY < canvas.height) {
+        endSrcY = findSafeCutY(canvas, endSrcY, searchRangePx)
+      } else {
+        endSrcY = canvas.height
       }
 
-      const headerGap = yOff === 0 ? 4 : 0
-      const sliceH = Math.min(usableH - headerGap, imgH - yOff)
-      const srcY = (yOff / imgH) * canvas.height
-      const srcH = (sliceH / imgH) * canvas.height
+      const sliceSrcH = endSrcY - srcY
+      if (sliceSrcH <= 0) break
 
       const sliceCanvas = document.createElement('canvas')
       sliceCanvas.width = canvas.width
-      sliceCanvas.height = Math.round(srcH)
+      sliceCanvas.height = Math.round(sliceSrcH)
       const ctx = sliceCanvas.getContext('2d')
-      ctx.drawImage(canvas, 0, Math.round(srcY), canvas.width, Math.round(srcH), 0, 0, canvas.width, Math.round(srcH))
+      ctx.fillStyle = '#f8f9fa'
+      ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height)
+      ctx.drawImage(canvas, 0, Math.round(srcY), canvas.width, Math.round(sliceSrcH), 0, 0, canvas.width, Math.round(sliceSrcH))
 
-      doc.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin + headerGap, imgW, sliceH)
+      const sliceMmH = sliceSrcH / pxPerMm
+      doc.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, topOffset, imgW, sliceMmH)
+      addHeaderFooter(tabIndex, isTabStart)
 
-      doc.setFontSize(6); doc.setFont('helvetica', 'normal'); doc.setTextColor('#868e96')
-      doc.text('TCO Calculator India — IRDAI · State Tax · Resale', margin, ph - 4)
-      yOff += sliceH
+      srcY = endSrcY
     }
   }
 
@@ -770,8 +823,8 @@ async function generatePDFFromUI(setActiveTab, contentRef, numYears, results, se
     const pageCount = doc.internal.getNumberOfPages()
     for (let p = 1; p <= pageCount; p++) {
       doc.setPage(p)
-      doc.setFontSize(6); doc.setFont('helvetica', 'normal'); doc.setTextColor('#adb5bd')
-      doc.text(`Page ${p} / ${pageCount}`, pw - margin, ph - 4, { align: 'right' })
+      doc.setFontSize(5.5); doc.setFont('helvetica', 'normal'); doc.setTextColor('#adb5bd')
+      doc.text(`Page ${p} / ${pageCount}`, pw - margin, ph - 3, { align: 'right' })
     }
     doc.save(`TCO-Report-${numYears}yr.pdf`)
   } finally {
@@ -914,7 +967,7 @@ export default function ResultsPage({ results, numYears, onBack }) {
         <ExportBar results={results} numYears={numYears} setActiveTab={setActiveTab} contentRef={contentRef} setExporting={setExporting} exporting={exporting} />
       </div>
 
-      <div ref={contentRef} style={{ marginTop: 20 }}>
+      <div ref={contentRef} data-pdf-content style={{ marginTop: 20 }}>
         {activeTab === 0 && <SummaryTab results={results} numYears={numYears} summaryRef={summaryRef} />}
         {activeTab === 1 && <CostAnalysisTab results={results} numYears={numYears} />}
         {activeTab === 2 && <ResaleDepTab results={results} numYears={numYears} />}
@@ -922,6 +975,25 @@ export default function ResultsPage({ results, numYears, onBack }) {
         {activeTab === 4 && <InsightsTab results={results} numYears={numYears} />}
       </div>
       <DownloadTabImage contentRef={contentRef} tabName={TABS[activeTab]} numYears={numYears} />
+
+      <footer className="app-footer">
+        <div className="footer-inner">
+          <p className="footer-brand">4-Wheeler PV TCO Calculator — India</p>
+          <p className="footer-desc">
+            Compare total cost of ownership for Petrol, Diesel, CNG, EV &amp; Hybrid vehicles.
+            State-wise life tax, IRDAI insurance, model-specific depreciation &amp; resale.
+          </p>
+          <div className="footer-links">
+            <a href="https://github.com/kapil433/TCO-Calculator" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <span className="footer-sep">·</span>
+            <a href="https://kapil433.github.io/TCO-Calculator/" target="_blank" rel="noopener noreferrer">Live App</a>
+          </div>
+          <p className="footer-legal">
+            &copy; {new Date().getFullYear()} Kapil Lodha. Open-source under MIT License.<br />
+            Data sources: IRDAI, state RTO portals, industry depreciation benchmarks. Figures are estimates for educational use only — not financial advice.
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }

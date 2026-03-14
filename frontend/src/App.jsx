@@ -253,6 +253,25 @@ export default function App() {
           {error}
         </div>
       )}
+
+      <footer className="app-footer">
+        <div className="footer-inner">
+          <p className="footer-brand">4-Wheeler PV TCO Calculator — India</p>
+          <p className="footer-desc">
+            Compare total cost of ownership for Petrol, Diesel, CNG, EV &amp; Hybrid vehicles.
+            State-wise life tax, IRDAI insurance, model-specific depreciation &amp; resale.
+          </p>
+          <div className="footer-links">
+            <a href="https://github.com/kapil433/TCO-Calculator" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <span className="footer-sep">·</span>
+            <a href="https://kapil433.github.io/TCO-Calculator/" target="_blank" rel="noopener noreferrer">Live App</a>
+          </div>
+          <p className="footer-legal">
+            &copy; {new Date().getFullYear()} Kapil Lodha. Open-source under MIT License.<br />
+            Data sources: IRDAI, state RTO portals, industry depreciation benchmarks. Figures are estimates for educational use only — not financial advice.
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }
