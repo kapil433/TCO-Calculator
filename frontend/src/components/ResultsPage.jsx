@@ -371,6 +371,7 @@ function YearByYearTab({ results, numYears }) {
       { label: 'Maintenance', data: results[0].yearByYear?.map((y) => y.maintYr) || [], backgroundColor: CAT_COLORS[3] },
       { label: 'Tyres', data: results[0].yearByYear?.map((y) => y.tyreYr) || [], backgroundColor: CAT_COLORS[4] },
       { label: 'Battery', data: results[0].yearByYear?.map((y) => y.battYr) || [], backgroundColor: CAT_COLORS[5] },
+      { label: 'Loan Interest', data: results[0].yearByYear?.map((y) => y.loanIntYr || 0) || [], backgroundColor: '#e67700' },
     ].filter((d) => d.data.some((v) => v > 0)),
   } : null
 
@@ -397,12 +398,13 @@ function YearByYearTab({ results, numYears }) {
                   <th className="r">Resale %</th><th className="r">Resale Val</th><th className="r">Net Cost</th>
                   <th className="r">₹/km</th><th className="r">Insurance</th><th className="r">Maint.</th><th className="r">Fuel</th>
                   <th className="r">Tyres</th><th className="r">Battery</th>
+                  {!r.cash && <th className="r">Loan Int.</th>}
                 </tr>
               </thead>
               <tbody>
                 {(r.yearByYear || []).map((y) => (
-                  <tr key={y.yr}>
-                    <td>{y.yr}</td>
+                  <tr key={y.yr} style={y.yr === numYears ? { background: 'rgba(212,160,23,0.12)', fontWeight: 600 } : {}}>
+                    <td>{y.yr}{y.yr === numYears ? ' ←' : ''}</td>
                     <td className="r mono">{fmt(y.yearCost)}</td><td className="r mono">{fmt(y.cumCost)}</td>
                     <td className="r">{y.resalePct}%</td><td className="r mono green">{fmt(y.resaleVal)}</td>
                     <td className="r mono bold">{fmt(y.netCost)}</td><td className="r">₹{y.cpkm}</td>
@@ -410,6 +412,7 @@ function YearByYearTab({ results, numYears }) {
                     <td className="r mono">{fmt(y.fuelAnn)}</td>
                     <td className="r mono">{y.tyreYr > 0 ? fmt(y.tyreYr) : '—'}</td>
                     <td className="r mono">{y.battYr > 0 ? fmt(y.battYr) : '—'}</td>
+                    {!r.cash && <td className="r mono">{y.loanIntYr > 0 ? fmt(y.loanIntYr) : '—'}</td>}
                   </tr>
                 ))}
               </tbody>
@@ -881,10 +884,10 @@ function generateExcel(results, numYears) {
   // ── Section: Year-by-Year per vehicle ──
   results.forEach((rv, vi) => {
     push([`YEAR-BY-YEAR: V${vi + 1} ${rv.make || ''} ${rv.model || ''} (${rv.fuel})`])
-    push(['Year', 'Year Cost', 'Cumulative', 'Resale %', 'Resale Value', 'Ann. Depreciation', 'Net Cost', '₹/km', 'Insurance', 'Maintenance', 'Fuel', 'Tyres', 'Battery'])
+    push(['Year', 'Year Cost', 'Cumulative', 'Resale %', 'Resale Value', 'Ann. Depreciation', 'Net Cost', '₹/km', 'Insurance', 'Maintenance', 'Fuel', 'Tyres', 'Battery', 'Loan Interest'])
     ;(rv.yearByYear || []).forEach((y, yi) => {
       const prevResale = yi > 0 ? (rv.resalePerYear?.[yi - 1] || 0) : rv.ex
-      push([y.yr, y.yearCost, y.cumCost, y.resalePct, y.resaleVal, prevResale - (rv.resalePerYear?.[yi] || 0), y.netCost, y.cpkm, y.insYr, y.maintYr, y.fuelAnn, y.tyreYr, y.battYr])
+      push([y.yr, y.yearCost, y.cumCost, y.resalePct, y.resaleVal, prevResale - (rv.resalePerYear?.[yi] || 0), y.netCost, y.cpkm, y.insYr, y.maintYr, y.fuelAnn, y.tyreYr, y.battYr, y.loanIntYr || 0])
     })
     blank()
   })

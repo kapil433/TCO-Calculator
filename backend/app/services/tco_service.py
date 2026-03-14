@@ -203,73 +203,145 @@ def calc_vehicle(
         "_includesBatt": include_battery,
         "_battAnnual": batt_annual,
         "_maintList": maint_list,
+        "ncb_mode": ncb_mode,
     }
 
     result["yearByYear"] = build_yearly_profile(result)
     return result
 
 
+def _amortize_interest(loan_amt: float, emi: float, tenure: int) -> list[float]:
+    """Distribute loan interest across years using proper amortization schedule.
+    Uses bisection to find the monthly rate, then tracks month-by-month balance."""
+    if loan_amt <= 0 or emi <= 0 or tenure <= 0:
+        return []
+    lo, hi = 0.0, 0.05
+    monthly_rate = 0.007
+    for _ in range(50):
+        mid = (lo + hi) / 2
+        emi_test = loan_amt * mid * (1 + mid) ** tenure / ((1 + mid) ** tenure - 1)
+        if emi_test < emi:
+            lo = mid
+        else:
+            hi = mid
+        monthly_rate = mid
+
+    balance = loan_amt
+    yr_int = 0.0
+    result = []
+    for m in range(1, tenure + 1):
+        int_m = balance * monthly_rate
+        yr_int += int_m
+        balance = max(0, balance + int_m - emi)
+        if m % 12 == 0 or m == tenure:
+            result.append(round(yr_int))
+            yr_int = 0.0
+    return result
+
+
 def build_yearly_profile(r: dict) -> list[dict]:
     """
-    Build year-by-year cost/depreciation/resale profile from calc_vehicle result.
-    Returns array of {yr, yearCost, cumCost, resaleVal, netCost, cpkm, insYr, maintYr,
-    tyreYr, battYr, fuelAnn, resalePct} for years 1..numYears.
+    Build year-by-year cost/depreciation/resale profile (always 15 years).
+    Mirrors the legacy buildYearlyProfile: amortized loan interest, recalculated
+    insurance from IDV/NCB/OD for all years, growth-ratio maintenance, fuel escalation.
     """
+    PROFILE_YEARS = 15
     ex = r["ex"]
     on_road = r["onRoad"]
     num_years = r["numYears"]
+    fuel = r.get("fuel", "petrol")
     ann_km = r.get("_annKm", 15000)
     mileage = r.get("_mil", 18)
     fuel_price = r.get("_fprice", 100)
-    fuel_escal_pct = r.get("_fuelEscalPct", 5)
-    escal_rate = fuel_escal_pct / 100
+    escal_rate = r.get("_fuelEscalPct", 5) / 100
     tyre_cycle = r.get("_tyreCycleYrs", 3)
     tyre_cost = r.get("_tyreSetCost", 0)
-    ins_arr = r.get("insArr", [])
     resale_arr = r.get("_resaleArr", [])
     batt_annual = r.get("_battAnnual", 0)
     includes_batt = r.get("_includesBatt", False)
     cash = r.get("cash", True)
-    total_int = r.get("totalInt", 0)
     addon_total = r.get("addonTotal", 0)
-    maint_list = r.get("_maintList", MAINT.get(r.get("fuel", "petrol"), MAINT["petrol"]))
+    eng = r.get("_eng", "mid")
+    ncb_mode = r.get("ncb_mode", "max")
+    ins_arr_override = r.get("insArr", [])
+
+    # --- Loan interest amortization (front-loaded per year) ---
+    amort_int_by_yr = []
+    if not cash:
+        loan_amt = r.get("loanAmt", 0)
+        emi_val = r.get("emi", 0)
+        tenure_months = r.get("tenure", 0)
+        amort_int_by_yr = _amortize_interest(loan_amt, emi_val, tenure_months)
+
+    # --- Maintenance schedule (growth-ratio, with fuel-specific escalation beyond array) ---
+    maint_base_list = list(MAINT.get(fuel, MAINT["petrol"]))
+    svc_base = r.get("_maintList", maint_base_list)[0] if r.get("_maintList") else maint_base_list[0]
+    maint_by_yr = []
+    for i in range(PROFILE_YEARS):
+        if i == 0:
+            maint_by_yr.append(round(svc_base))
+        elif i < len(maint_base_list):
+            grow = maint_base_list[i] / maint_base_list[i - 1] if maint_base_list[i - 1] > 0 else 1
+            maint_by_yr.append(round(maint_by_yr[i - 1] * grow))
+        else:
+            esc = 1.08 if fuel == "ev" else 1.18 if fuel == "diesel" else 1.15
+            maint_by_yr.append(round(maint_by_yr[i - 1] * esc))
+
+    # --- Insurance: recalculate from scratch for all 15 years ---
+    tp_base = TP.get(eng, TP["mid"])
+    if fuel == "ev":
+        tp_base = round(tp_base * 0.85)
+
+    # --- Fuel base cost ---
+    fuel_ann_base = (ann_km / mileage) * fuel_price if mileage > 0 else 0
 
     profile = []
     cum_cost = on_road
-    if not cash and total_int:
-        cum_cost += total_int
-    cum_cost_running = cum_cost
 
-    for yr in range(1, num_years + 1):
-        ins_yr = ins_arr[yr - 1] if yr - 1 < len(ins_arr) else 0
-        maint_yr = maint_list[yr - 1] if yr - 1 < len(maint_list) else maint_list[-1]
+    for yr in range(1, PROFILE_YEARS + 1):
+        # Insurance — recalculated per year using IRDAI formula
+        idv = ex * (1 - IDV_D[min(yr - 1, len(IDV_D) - 1)])
+        if ncb_mode == "avg":
+            ncb_rate = 0.20 if ((yr - 1) % 3) == 2 else 0
+        else:
+            ncb_rate = NCB[min(yr - 1, len(NCB) - 1)]
+        od = idv * get_od_rate(idv) * (1 - ncb_rate)
+        ins_yr = round((od + tp_base + PA_COVER) * (1 + INS_GST))
+        if yr == 1 and ins_arr_override and ins_arr_override[0]:
+            ins_yr = ins_arr_override[0]
+
+        maint_yr = maint_by_yr[yr - 1] if yr - 1 < len(maint_by_yr) else maint_by_yr[-1]
         tyre_yr = tyre_cost if tyre_cycle and yr % tyre_cycle == 0 else 0
         batt_yr = round(batt_annual) if includes_batt else 0
-        fuel_ann = round((ann_km / mileage) * fuel_price * ((1 + escal_rate) ** (yr - 1)))
-        addon_yr = round(addon_total / num_years) if yr <= num_years else 0
+        fuel_ann = round(fuel_ann_base * ((1 + escal_rate) ** (yr - 1)))
 
-        year_cost = ins_yr + maint_yr + tyre_yr + batt_yr + fuel_ann + addon_yr
-        cum_cost_running += year_cost
+        addon_yr = round(addon_total / num_years) if yr <= num_years else 0
+        loan_int_yr = amort_int_by_yr[yr - 1] if yr - 1 < len(amort_int_by_yr) else 0
+
+        year_cost = fuel_ann + ins_yr + addon_yr + maint_yr + tyre_yr + batt_yr + loan_int_yr
+        cum_cost += year_cost
 
         resale_pct = resale_arr[yr - 1] if yr - 1 < len(resale_arr) else (resale_arr[-1] if resale_arr else 0.5)
         resale_val = round(ex * resale_pct)
-        net_cost = cum_cost_running - resale_val
+        net_cost = cum_cost - resale_val
         total_km = ann_km * yr
-        cpkm = round(cum_cost_running / total_km, 2) if total_km > 0 else 0
+        cpkm = round(cum_cost / total_km, 2) if total_km > 0 else 0
 
         profile.append({
             "yr": yr,
             "yearCost": round(year_cost),
-            "cumCost": round(cum_cost_running),
+            "cumCost": round(cum_cost),
             "resaleVal": resale_val,
             "resalePct": round(resale_pct * 100, 1),
             "netCost": round(net_cost),
             "cpkm": cpkm,
             "insYr": ins_yr,
+            "addonYr": addon_yr,
             "maintYr": maint_yr,
             "tyreYr": tyre_yr,
             "battYr": batt_yr,
             "fuelAnn": fuel_ann,
+            "loanIntYr": loan_int_yr,
         })
 
     return profile
